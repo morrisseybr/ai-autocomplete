@@ -1,0 +1,10 @@
+.vscode/**
+src/**
+scripts/**
+node_modules/**
+!node_modules/@anthropic-ai/**
+**/tsconfig.json
+**/esbuild.js
+**/*.map
+**/*.ts
+.gitignore

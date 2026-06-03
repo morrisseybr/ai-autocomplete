@@ -1,0 +1,103 @@
+{
+  "name": "ai-autocomplete",
+  "displayName": "AI Autocomplete",
+  "description": "Inline code autocomplete (ghost text) powered by AI CLIs, starting with Claude Code.",
+  "version": "0.1.0",
+  "publisher": "caravela",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Snippets"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiAutocomplete.toggle",
+        "title": "AI Autocomplete: Toggle Enabled"
+      },
+      {
+        "command": "aiAutocomplete.trigger",
+        "title": "AI Autocomplete: Trigger Suggestion"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "aiAutocomplete.trigger",
+        "key": "alt+\\",
+        "when": "editorTextFocus && !editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "AI Autocomplete",
+      "properties": {
+        "aiAutocomplete.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable inline AI autocomplete suggestions."
+        },
+        "aiAutocomplete.provider": {
+          "type": "string",
+          "enum": [
+            "claude"
+          ],
+          "default": "claude",
+          "description": "Which AI provider to use for completions."
+        },
+        "aiAutocomplete.claude.model": {
+          "type": "string",
+          "default": "claude-haiku-4-5-20251001",
+          "description": "Claude model alias or full name used for completions (a fast model is recommended)."
+        },
+        "aiAutocomplete.debounceMs": {
+          "type": "number",
+          "default": 600,
+          "minimum": 0,
+          "description": "Milliseconds to wait after the user stops typing before requesting a suggestion."
+        },
+        "aiAutocomplete.contextLinesBefore": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "description": "Number of lines before the cursor to send as context."
+        },
+        "aiAutocomplete.contextLinesAfter": {
+          "type": "number",
+          "default": 30,
+          "minimum": 0,
+          "description": "Number of lines after the cursor to send as context."
+        },
+        "aiAutocomplete.maxOutputTokens": {
+          "type": "number",
+          "default": 256,
+          "minimum": 16,
+          "description": "Maximum number of tokens the model may produce for a single completion."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node --import tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.161"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
