@@ -4,6 +4,7 @@ import type { CompletionProvider } from "./types";
 export interface ProviderSettings {
   provider: string;
   claudeModel: string;
+  claudeDisableThinking: boolean;
   onLog?: (message: string) => void;
 }
 
@@ -15,6 +16,7 @@ export function createProvider(settings: ProviderSettings): CompletionProvider {
     default:
       return new ClaudeAgentProvider({
         model: settings.claudeModel,
+        disableThinking: settings.claudeDisableThinking,
         onLog: settings.onLog,
       });
   }

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { readConfig } from "./config";
+import { readConfig, type ExtensionConfig } from "./config";
 import { buildContext } from "./context/contextBuilder";
 import { createProvider } from "./providers/registry";
 import type { CompletionProvider } from "./providers/types";
@@ -18,20 +18,26 @@ export class AiInlineCompletionProvider
 
   constructor(private readonly loading: LoadingIndicator) {
     const cfg = readConfig();
-    this.providerKey = `${cfg.provider}:${cfg.claudeModel}`;
+    this.providerKey = providerKeyFor(cfg);
     this.provider = createProvider({
       provider: cfg.provider,
       claudeModel: cfg.claudeModel,
+      claudeDisableThinking: cfg.claudeDisableThinking,
       onLog: log,
     });
   }
 
-  // Rebuild the underlying provider if provider/model settings changed.
-  private ensureProvider(provider: string, claudeModel: string): void {
-    const key = `${provider}:${claudeModel}`;
+  // Rebuild the underlying provider if any provider-affecting setting changed.
+  private ensureProvider(cfg: ExtensionConfig): void {
+    const key = providerKeyFor(cfg);
     if (key !== this.providerKey) {
       this.providerKey = key;
-      this.provider = createProvider({ provider, claudeModel, onLog: log });
+      this.provider = createProvider({
+        provider: cfg.provider,
+        claudeModel: cfg.claudeModel,
+        claudeDisableThinking: cfg.claudeDisableThinking,
+        onLog: log,
+      });
     }
   }
 
@@ -45,7 +51,7 @@ export class AiInlineCompletionProvider
     if (!cfg.enabled) {
       return undefined;
     }
-    this.ensureProvider(cfg.provider, cfg.claudeModel);
+    this.ensureProvider(cfg);
 
     // Debounce: wait until the user pauses. A keystroke cancels this token,
     // so we bail out before spending an API call.
@@ -106,6 +112,11 @@ export class AiInlineCompletionProvider
       sub.dispose();
     }
   }
+}
+
+// Key identifying the provider-affecting settings; changing any rebuilds it.
+function providerKeyFor(cfg: ExtensionConfig): string {
+  return `${cfg.provider}:${cfg.claudeModel}:${cfg.claudeDisableThinking}`;
 }
 
 // Resolves true if the token was cancelled before the delay elapsed.

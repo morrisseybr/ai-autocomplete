@@ -1,4 +1,4 @@
-import { cleanCompletion } from "../util/cleanCompletion";
+import { cleanCompletion, NO_COMPLETION } from "../util/cleanCompletion";
 import type {
   CompletionProvider,
   CompletionRequest,
@@ -19,25 +19,37 @@ function getQuery(): Promise<QueryFn> {
   return queryFnPromise;
 }
 
-// Sentinel the model must emit when nothing should be suggested. This is far
-// more reliable than asking it to "output nothing" — that prompts prose like
-// "The code is already complete." We map this token (and empty output) to "".
-const NO_COMPLETION = "NO_COMPLETION";
-
+// Fill-in-the-middle prompt. Keeping the output clean rests on: (1) presenting
+// code with <PREFIX>/<SUFFIX> tags rather than a ``` fence (a fenced prompt makes
+// the model reply with a fence + prose), (2) an explicit output contract with a
+// WRONG/RIGHT contrast, and (3) few-shot examples pinning the exact raw format.
+// cleanCompletion() is the safety net for anything that still slips through.
 const SYSTEM_PROMPT = [
-  "You are a code autocomplete engine, like GitHub Copilot.",
-  "You receive a code file with a <CURSOR> marker showing where the user's caret is.",
-  "Output ONLY the raw text that should be inserted at <CURSOR> to continue the code.",
-  "Rules:",
-  "- No markdown fences, no language tags, no explanations, no comments about the code.",
-  "- Do not repeat code that already appears before the cursor.",
-  "- Produce a short, focused completion (typically the rest of the current line or a few lines).",
-  "- Preserve the file's existing indentation style.",
-  `- If the code is already complete or no sensible completion exists, output exactly ${NO_COMPLETION} and nothing else — never explain, never write prose.`,
+  "You are a fill-in-the-middle (FIM) code completion engine, like GitHub Copilot's inline suggestions.",
+  "You receive code as <PREFIX> (text before the caret) and <SUFFIX> (text after the caret).",
+  "Your ENTIRE response is inserted verbatim at the caret, so PREFIX + your_response + SUFFIX must be the final code.",
+  "",
+  "Output contract — your response must be ONLY the raw characters to insert. It is fed directly into the editor.",
+  "NEVER include any of these: explanations, commentary, reasoning, apologies, leading/trailing prose,",
+  "markdown, ``` code fences, language tags, or quotes/backticks wrapping the whole answer.",
+  "Never repeat text that already appears in PREFIX or SUFFIX. Keep it short (finish the current line or a few lines).",
+  `If the code is already complete or no insertion makes sense, respond with exactly ${NO_COMPLETION} (nothing else).`,
+  "",
+  "Examples — left of '=>' is the request, right of '=>' is the ONLY acceptable output:",
+  "<PREFIX>def add(a, b):\\n    return </PREFIX><SUFFIX></SUFFIX> => a + b",
+  "<PREFIX>const nums = [1, 2, 3].map((n) => </PREFIX><SUFFIX>)</SUFFIX> => n * 2",
+  "<PREFIX>    console.log(`App running at </PREFIX><SUFFIX>\\n});</SUFFIX> => http://localhost:${port}`);",
+  `<PREFIX>console.log("done");</PREFIX><SUFFIX></SUFFIX> => ${NO_COMPLETION}`,
+  "",
+  'WRONG output (never do this): "Here is the completion:\\n```js\\nx + y\\n```"',
+  "RIGHT output for that same case: x + y",
 ].join("\n");
 
 export interface ClaudeProviderConfig {
   model: string;
+  // Disable the model's extended thinking. For autocomplete it adds ~4s of
+  // latency with no quality benefit, so this defaults on in the config layer.
+  disableThinking: boolean;
   onLog?: (message: string) => void;
 }
 
@@ -76,8 +88,10 @@ export class ClaudeAgentProvider implements CompletionProvider {
           maxTurns: 1,
           cwd: req.workspaceRoot,
           abortController: controller,
-          // Don't pollute the user's session history with autocomplete calls.
-          // (Persistence is irrelevant for one-shot, but explicit is clearer.)
+          // Extended thinking adds ~4s to a trivial completion; turn it off.
+          ...(this.cfg.disableThinking
+            ? { thinking: { type: "disabled" as const } }
+            : {}),
         },
       });
 
@@ -111,16 +125,12 @@ export class ClaudeAgentProvider implements CompletionProvider {
       req.signal.removeEventListener("abort", onAbort);
     }
 
-    // Treat the "no suggestion" sentinel (and empty output) as no completion.
-    if (collected.trim() === NO_COMPLETION || collected.trim() === "") {
+    // cleanCompletion strips fences and the sentinel; an empty result means
+    // there is nothing to suggest.
+    const text = cleanCompletion(collected, req.prefix);
+    if (!text) {
       this.cfg.onLog?.(`claude: no completion (${Date.now() - started}ms)`);
       return { text: "" };
-    }
-
-    let text = cleanCompletion(collected, req.prefix);
-    // Defense in depth: if the sentinel survived cleaning, drop it.
-    if (text.startsWith(NO_COMPLETION)) {
-      text = "";
     }
     this.cfg.onLog?.(
       `claude completion in ${Date.now() - started}ms, ${text.length} chars`
@@ -129,20 +139,15 @@ export class ClaudeAgentProvider implements CompletionProvider {
   }
 
   private buildPrompt(req: CompletionRequest): string {
-    const openList =
-      req.openFiles.length > 0
-        ? `Other open files in the editor: ${req.openFiles.join(", ")}\n`
-        : "";
-
-    return [
-      `Language: ${req.languageId}`,
-      `File: ${req.filePath}`,
-      openList,
-      "Complete the code at the <CURSOR> marker. Output only the insertion text.",
-      "",
-      "```",
-      `${req.prefix}<CURSOR>${req.suffix}`,
-      "```",
-    ].join("\n");
+    const lines = [`Language: ${req.languageId}`, `File: ${req.filePath}`];
+    if (req.openFiles.length > 0) {
+      lines.push(`Open files: ${req.openFiles.join(", ")}`);
+    }
+    // No ``` fence here on purpose — it makes the model echo a fence + prose.
+    lines.push(`<PREFIX>${req.prefix}</PREFIX>`);
+    lines.push(`<SUFFIX>${req.suffix}</SUFFIX>`);
+    // Recency reinforcement: the last thing the model reads is the contract.
+    lines.push("Respond with ONLY the raw code to insert (no prose, no fences).");
+    return lines.join("\n");
   }
 }

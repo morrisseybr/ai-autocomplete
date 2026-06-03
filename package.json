@@ -56,6 +56,11 @@
           "default": "claude-haiku-4-5-20251001",
           "description": "Claude model alias or full name used for completions (a fast model is recommended)."
         },
+        "aiAutocomplete.claude.disableThinking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Disable the model's extended thinking. Strongly recommended for autocomplete: it cuts latency roughly 3x (~6s to ~2s) with no quality loss for short completions."
+        },
         "aiAutocomplete.debounceMs": {
           "type": "number",
           "default": 600,
@@ -64,13 +69,13 @@
         },
         "aiAutocomplete.contextLinesBefore": {
           "type": "number",
-          "default": 50,
+          "default": 100,
           "minimum": 0,
           "description": "Number of lines before the cursor to send as context."
         },
         "aiAutocomplete.contextLinesAfter": {
           "type": "number",
-          "default": 30,
+          "default": 50,
           "minimum": 0,
           "description": "Number of lines after the cursor to send as context."
         },

@@ -40,9 +40,10 @@ file, type, and pause to see suggestions.
 | `enabled`            | `true`                         | Enable/disable suggestions.                  |
 | `provider`           | `claude`                       | AI backend to use.                           |
 | `claude.model`       | `claude-haiku-4-5-20251001`    | Model (a fast one is recommended).           |
+| `claude.disableThinking` | `true`                     | Turn off extended thinking (~3x faster).     |
 | `debounceMs`         | `600`                          | Pause before requesting a suggestion.        |
-| `contextLinesBefore` | `50`                           | Lines before the cursor sent as context.     |
-| `contextLinesAfter`  | `30`                           | Lines after the cursor sent as context.      |
+| `contextLinesBefore` | `100`                          | Lines before the cursor sent as context.     |
+| `contextLinesAfter`  | `50`                           | Lines after the cursor sent as context.      |
 | `maxOutputTokens`    | `256`                          | Upper bound on generated tokens.             |
 | `showLoadingIndicator` | `true`                       | Animated ghost-text spinner while generating.|
 
@@ -53,6 +54,8 @@ file, type, and pause to see suggestions.
 
 ## Notes on latency
 
-Each request spawns the `claude` binary, so cold latency is ~3–5s. A future
-optimization keeps a warm session to amortize startup down to ~1–2s per
-completion. See the plan for details.
+With `claude.disableThinking` on (the default), completions take ~2s. Leaving
+thinking enabled triples that (~6s) because the model "thinks" before answering —
+wasted effort for short completions. A further optimization (a warm, reused
+session) could shave another ~700ms but accumulates conversation state; it is a
+documented follow-up, not yet implemented.
