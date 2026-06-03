@@ -1,12 +1,14 @@
 import * as vscode from "vscode";
 import { AiInlineCompletionProvider } from "./inlineProvider";
+import { LoadingIndicator } from "./util/loadingIndicator";
 import { disposeLogger, initLogger, log } from "./util/logger";
 
 export function activate(context: vscode.ExtensionContext): void {
   initLogger();
   log("AI Autocomplete activated");
 
-  const inlineProvider = new AiInlineCompletionProvider();
+  const loading = new LoadingIndicator();
+  const inlineProvider = new AiInlineCompletionProvider(loading);
   const registration = vscode.languages.registerInlineCompletionItemProvider(
     { pattern: "**" },
     inlineProvider
@@ -39,7 +41,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
 
-  context.subscriptions.push(registration, toggle, trigger);
+  context.subscriptions.push(loading, registration, toggle, trigger);
 }
 
 export function deactivate(): void {

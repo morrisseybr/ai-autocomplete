@@ -19,6 +19,11 @@ function getQuery(): Promise<QueryFn> {
   return queryFnPromise;
 }
 
+// Sentinel the model must emit when nothing should be suggested. This is far
+// more reliable than asking it to "output nothing" — that prompts prose like
+// "The code is already complete." We map this token (and empty output) to "".
+const NO_COMPLETION = "NO_COMPLETION";
+
 const SYSTEM_PROMPT = [
   "You are a code autocomplete engine, like GitHub Copilot.",
   "You receive a code file with a <CURSOR> marker showing where the user's caret is.",
@@ -28,7 +33,7 @@ const SYSTEM_PROMPT = [
   "- Do not repeat code that already appears before the cursor.",
   "- Produce a short, focused completion (typically the rest of the current line or a few lines).",
   "- Preserve the file's existing indentation style.",
-  "- If no sensible completion exists, output nothing."
+  `- If the code is already complete or no sensible completion exists, output exactly ${NO_COMPLETION} and nothing else — never explain, never write prose.`,
 ].join("\n");
 
 export interface ClaudeProviderConfig {
@@ -106,7 +111,17 @@ export class ClaudeAgentProvider implements CompletionProvider {
       req.signal.removeEventListener("abort", onAbort);
     }
 
-    const text = cleanCompletion(collected, req.prefix);
+    // Treat the "no suggestion" sentinel (and empty output) as no completion.
+    if (collected.trim() === NO_COMPLETION || collected.trim() === "") {
+      this.cfg.onLog?.(`claude: no completion (${Date.now() - started}ms)`);
+      return { text: "" };
+    }
+
+    let text = cleanCompletion(collected, req.prefix);
+    // Defense in depth: if the sentinel survived cleaning, drop it.
+    if (text.startsWith(NO_COMPLETION)) {
+      text = "";
+    }
     this.cfg.onLog?.(
       `claude completion in ${Date.now() - started}ms, ${text.length} chars`
     );

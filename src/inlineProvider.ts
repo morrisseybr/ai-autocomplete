@@ -3,6 +3,7 @@ import { readConfig } from "./config";
 import { buildContext } from "./context/contextBuilder";
 import { createProvider } from "./providers/registry";
 import type { CompletionProvider } from "./providers/types";
+import { LoadingIndicator } from "./util/loadingIndicator";
 import { log, logError } from "./util/logger";
 
 // Bridges VSCode's inline completion lifecycle to an AI CompletionProvider.
@@ -15,7 +16,7 @@ export class AiInlineCompletionProvider
   private provider: CompletionProvider;
   private providerKey: string;
 
-  constructor() {
+  constructor(private readonly loading: LoadingIndicator) {
     const cfg = readConfig();
     this.providerKey = `${cfg.provider}:${cfg.claudeModel}`;
     this.provider = createProvider({
@@ -59,9 +60,22 @@ export class AiInlineCompletionProvider
 
     const ctx = buildContext(document, position, cfg);
 
+    // Show the loading spinner now that the real request is about to fire (only
+    // after the debounce, never during it). Stop it the moment the user types.
+    let gen: number | undefined;
+    if (cfg.showLoadingIndicator) {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && editor.document === document) {
+        gen = this.loading.start(editor, position);
+      }
+    }
+
     // Bridge the VSCode token to an AbortSignal so we can kill the subprocess.
     const controller = new AbortController();
-    const sub = token.onCancellationRequested(() => controller.abort());
+    const sub = token.onCancellationRequested(() => {
+      controller.abort();
+      this.loading.stop(gen);
+    });
 
     try {
       const result = await this.provider.complete({
@@ -88,6 +102,7 @@ export class AiInlineCompletionProvider
       logError("inline completion failed", err);
       return undefined;
     } finally {
+      this.loading.stop(gen);
       sub.dispose();
     }
   }

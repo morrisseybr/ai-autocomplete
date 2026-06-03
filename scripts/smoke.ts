@@ -12,6 +12,7 @@ async function main() {
     onLog: (m) => console.log(`[log] ${m}`),
   });
 
+  // Case 1: an incomplete function — expect a real completion.
   const prefix = [
     "def fibonacci(n):",
     '    """Return the nth fibonacci number."""',
@@ -20,24 +21,45 @@ async function main() {
     "    ",
   ].join("\n");
 
+  const result = await run(provider, prefix, "");
+  console.log("\n=== rendered ===");
+  console.log(prefix + result.text);
+
+  // Case 2: already-complete code with the cursor on a trailing blank line —
+  // expect NO suggestion (empty string, no explanatory prose).
+  const completePrefix = [
+    "def add(a, b):",
+    "    return a + b",
+    "",
+    "",
+  ].join("\n");
+
+  const noResult = await run(provider, completePrefix, "");
+  console.log(
+    `\n=== no-completion case → ${noResult.text === "" ? "OK (empty)" : "FAIL: " + JSON.stringify(noResult.text)} ===`
+  );
+}
+
+async function run(
+  provider: ClaudeAgentProvider,
+  prefix: string,
+  suffix: string
+) {
   const controller = new AbortController();
   const started = Date.now();
-
   const result = await provider.complete({
     languageId: "python",
     filePath: "sample.py",
     prefix,
-    suffix: "",
+    suffix,
     openFiles: ["sample.py", "utils.py"],
     workspaceRoot: process.cwd(),
     maxOutputTokens: 256,
     signal: controller.signal,
   });
-
   console.log(`\n=== completion (${Date.now() - started}ms) ===`);
   console.log(JSON.stringify(result.text));
-  console.log("\n=== rendered ===");
-  console.log(prefix + result.text);
+  return result;
 }
 
 main().catch((err) => {

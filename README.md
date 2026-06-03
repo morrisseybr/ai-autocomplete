@@ -44,6 +44,7 @@ file, type, and pause to see suggestions.
 | `contextLinesBefore` | `50`                           | Lines before the cursor sent as context.     |
 | `contextLinesAfter`  | `30`                           | Lines after the cursor sent as context.      |
 | `maxOutputTokens`    | `256`                          | Upper bound on generated tokens.             |
+| `showLoadingIndicator` | `true`                       | Animated ghost-text spinner while generating.|
 
 ## Commands
 

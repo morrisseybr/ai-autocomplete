@@ -9,6 +9,7 @@ export interface ExtensionConfig {
   contextLinesBefore: number;
   contextLinesAfter: number;
   maxOutputTokens: number;
+  showLoadingIndicator: boolean;
 }
 
 export function readConfig(): ExtensionConfig {
@@ -21,5 +22,6 @@ export function readConfig(): ExtensionConfig {
     contextLinesBefore: c.get<number>("contextLinesBefore", 50),
     contextLinesAfter: c.get<number>("contextLinesAfter", 30),
     maxOutputTokens: c.get<number>("maxOutputTokens", 256),
+    showLoadingIndicator: c.get<boolean>("showLoadingIndicator", true),
   };
 }

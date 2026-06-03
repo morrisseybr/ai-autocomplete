@@ -79,6 +79,11 @@
           "default": 256,
           "minimum": 16,
           "description": "Maximum number of tokens the model may produce for a single completion."
+        },
+        "aiAutocomplete.showLoadingIndicator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show an animated spinner as ghost text at the cursor while a suggestion is being generated."
         }
       }
     }
