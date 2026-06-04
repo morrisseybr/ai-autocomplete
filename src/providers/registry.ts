@@ -5,6 +5,7 @@ export interface ProviderSettings {
   provider: string;
   claudeModel: string;
   claudeDisableThinking: boolean;
+  claudeExecutablePath?: string;
   onLog?: (message: string) => void;
 }
 
@@ -17,6 +18,7 @@ export function createProvider(settings: ProviderSettings): CompletionProvider {
       return new ClaudeAgentProvider({
         model: settings.claudeModel,
         disableThinking: settings.claudeDisableThinking,
+        executablePath: settings.claudeExecutablePath,
         onLog: settings.onLog,
       });
   }

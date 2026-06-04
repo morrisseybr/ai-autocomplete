@@ -50,6 +50,9 @@ export interface ClaudeProviderConfig {
   // Disable the model's extended thinking. For autocomplete it adds ~4s of
   // latency with no quality benefit, so this defaults on in the config layer.
   disableThinking: boolean;
+  // Path to the user's claude binary. Always set in practice — the package
+  // ships without the SDK's bundled binary, so the SDK needs an explicit path.
+  executablePath?: string;
   onLog?: (message: string) => void;
 }
 
@@ -91,6 +94,10 @@ export class ClaudeAgentProvider implements CompletionProvider {
           // Extended thinking adds ~4s to a trivial completion; turn it off.
           ...(this.cfg.disableThinking
             ? { thinking: { type: "disabled" as const } }
+            : {}),
+          // Use the user's installed claude binary (the package omits the SDK's).
+          ...(this.cfg.executablePath
+            ? { pathToClaudeCodeExecutable: this.cfg.executablePath }
             : {}),
         },
       });

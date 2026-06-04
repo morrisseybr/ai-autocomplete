@@ -18,9 +18,16 @@ completions — no custom keybindings required.
 
 ## Requirements
 
-- The `claude` CLI installed and authenticated (`claude` logged in via OAuth, or
-  `ANTHROPIC_API_KEY` set). The agent SDK spawns the native binary under the hood.
-- Node.js 18+ and VS Code 1.85+.
+> **The Claude Code CLI must be installed and authenticated.** This extension is
+> a thin client — it does not bundle Claude. It runs the `claude` binary already
+> on your machine, so you must [install Claude Code](https://docs.claude.com/en/docs/claude-code/setup)
+> and log in (`claude` via OAuth, or `ANTHROPIC_API_KEY` set) first.
+
+- `claude` available on your `PATH`. If it lives somewhere non-standard, set
+  `aiAutocomplete.claude.executablePath` to its full path. The extension
+  auto-detects it on `PATH` and common locations (e.g. `~/.local/bin`); if it
+  can't be found, you'll get a notification with a link to install it.
+- VS Code 1.85+.
 
 ## Develop
 
@@ -40,6 +47,7 @@ file, type, and pause to see suggestions.
 | `enabled`            | `true`                         | Enable/disable suggestions.                  |
 | `provider`           | `claude`                       | AI backend to use.                           |
 | `claude.model`       | `claude-haiku-4-5-20251001`    | Model (a fast one is recommended).           |
+| `claude.executablePath` | `""` (auto-detect)          | Path to the `claude` binary if not on PATH.  |
 | `claude.disableThinking` | `true`                     | Turn off extended thinking (~3x faster).     |
 | `debounceMs`         | `600`                          | Pause before requesting a suggestion.        |
 | `contextLinesBefore` | `100`                          | Lines before the cursor sent as context.     |

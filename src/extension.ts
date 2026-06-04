@@ -1,11 +1,17 @@
 import * as vscode from "vscode";
+import { readConfig } from "./config";
 import { AiInlineCompletionProvider } from "./inlineProvider";
+import { ensureClaudePath } from "./util/claudeStatus";
 import { LoadingIndicator } from "./util/loadingIndicator";
 import { disposeLogger, initLogger, log } from "./util/logger";
 
 export function activate(context: vscode.ExtensionContext): void {
   initLogger();
   log("AI Autocomplete activated");
+
+  // Tell the user up front if the Claude Code CLI isn't available, rather than
+  // only on the first keystroke.
+  ensureClaudePath(readConfig().claudeExecutablePath);
 
   const loading = new LoadingIndicator();
   const inlineProvider = new AiInlineCompletionProvider(loading);

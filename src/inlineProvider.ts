@@ -3,6 +3,7 @@ import { readConfig, type ExtensionConfig } from "./config";
 import { buildContext } from "./context/contextBuilder";
 import { createProvider } from "./providers/registry";
 import type { CompletionProvider } from "./providers/types";
+import { ensureClaudePath } from "./util/claudeStatus";
 import { LoadingIndicator } from "./util/loadingIndicator";
 import { log, logError } from "./util/logger";
 
@@ -13,32 +14,31 @@ import { log, logError } from "./util/logger";
 export class AiInlineCompletionProvider
   implements vscode.InlineCompletionItemProvider
 {
-  private provider: CompletionProvider;
-  private providerKey: string;
+  // Built lazily once the Claude binary is resolved (which can only happen at
+  // completion time, since it may surface a notification).
+  private provider?: CompletionProvider;
+  private providerKey = "";
 
-  constructor(private readonly loading: LoadingIndicator) {
-    const cfg = readConfig();
-    this.providerKey = providerKeyFor(cfg);
-    this.provider = createProvider({
-      provider: cfg.provider,
-      claudeModel: cfg.claudeModel,
-      claudeDisableThinking: cfg.claudeDisableThinking,
-      onLog: log,
-    });
-  }
+  constructor(private readonly loading: LoadingIndicator) {}
 
-  // Rebuild the underlying provider if any provider-affecting setting changed.
-  private ensureProvider(cfg: ExtensionConfig): void {
-    const key = providerKeyFor(cfg);
-    if (key !== this.providerKey) {
+  // Returns a provider for the current settings + resolved binary, rebuilding it
+  // whenever any provider-affecting input changes.
+  private getProvider(
+    cfg: ExtensionConfig,
+    claudePath: string
+  ): CompletionProvider {
+    const key = providerKeyFor(cfg, claudePath);
+    if (!this.provider || key !== this.providerKey) {
       this.providerKey = key;
       this.provider = createProvider({
         provider: cfg.provider,
         claudeModel: cfg.claudeModel,
         claudeDisableThinking: cfg.claudeDisableThinking,
+        claudeExecutablePath: claudePath,
         onLog: log,
       });
     }
+    return this.provider;
   }
 
   async provideInlineCompletionItems(
@@ -51,7 +51,6 @@ export class AiInlineCompletionProvider
     if (!cfg.enabled) {
       return undefined;
     }
-    this.ensureProvider(cfg);
 
     // Debounce: wait until the user pauses. A keystroke cancels this token,
     // so we bail out before spending an API call.
@@ -63,6 +62,14 @@ export class AiInlineCompletionProvider
         return undefined;
       }
     }
+
+    // Resolve the Claude binary; if it's missing the user has been notified and
+    // there is nothing to suggest.
+    const claudePath = ensureClaudePath(cfg.claudeExecutablePath);
+    if (!claudePath) {
+      return undefined;
+    }
+    const provider = this.getProvider(cfg, claudePath);
 
     const ctx = buildContext(document, position, cfg);
 
@@ -84,7 +91,7 @@ export class AiInlineCompletionProvider
     });
 
     try {
-      const result = await this.provider.complete({
+      const result = await provider.complete({
         languageId: ctx.languageId,
         filePath: ctx.filePath,
         prefix: ctx.prefix,
@@ -114,9 +121,9 @@ export class AiInlineCompletionProvider
   }
 }
 
-// Key identifying the provider-affecting settings; changing any rebuilds it.
-function providerKeyFor(cfg: ExtensionConfig): string {
-  return `${cfg.provider}:${cfg.claudeModel}:${cfg.claudeDisableThinking}`;
+// Key identifying the provider-affecting inputs; changing any rebuilds it.
+function providerKeyFor(cfg: ExtensionConfig, claudePath: string): string {
+  return `${cfg.provider}:${cfg.claudeModel}:${cfg.claudeDisableThinking}:${claudePath}`;
 }
 
 // Resolves true if the token was cancelled before the delay elapsed.

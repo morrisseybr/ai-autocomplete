@@ -5,6 +5,7 @@ export interface ExtensionConfig {
   enabled: boolean;
   provider: string;
   claudeModel: string;
+  claudeExecutablePath: string;
   claudeDisableThinking: boolean;
   debounceMs: number;
   contextLinesBefore: number;
@@ -19,6 +20,7 @@ export function readConfig(): ExtensionConfig {
     enabled: c.get<boolean>("enabled", true),
     provider: c.get<string>("provider", "claude"),
     claudeModel: c.get<string>("claude.model", "claude-haiku-4-5-20251001"),
+    claudeExecutablePath: c.get<string>("claude.executablePath", ""),
     claudeDisableThinking: c.get<boolean>("claude.disableThinking", true),
     debounceMs: c.get<number>("debounceMs", 600),
     contextLinesBefore: c.get<number>("contextLinesBefore", 100),

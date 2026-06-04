@@ -2,7 +2,10 @@
 src/**
 scripts/**
 node_modules/**
-!node_modules/@anthropic-ai/**
+# Ship only the SDK's JS (sdk.mjs, ~4.5MB). Its per-platform native binaries
+# (@anthropic-ai/claude-agent-sdk-*, 200MB+) are intentionally excluded — the
+# extension spawns the user's own installed `claude` instead.
+!node_modules/@anthropic-ai/claude-agent-sdk/**
 **/tsconfig.json
 **/esbuild.js
 **/*.map

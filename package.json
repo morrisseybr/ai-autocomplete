@@ -56,6 +56,11 @@
           "default": "claude-haiku-4-5-20251001",
           "description": "Claude model alias or full name used for completions (a fast model is recommended)."
         },
+        "aiAutocomplete.claude.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Claude Code CLI binary (e.g. C:\\Users\\you\\.local\\bin\\claude.exe). Leave empty to auto-detect 'claude' on your PATH. Requires Claude Code to be installed and authenticated."
+        },
         "aiAutocomplete.claude.disableThinking": {
           "type": "boolean",
           "default": true,
