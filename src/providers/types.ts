@@ -23,6 +23,22 @@ export interface CompletionRequest {
 export interface CompletionResult {
   /** Text to insert at the cursor. Empty string means "no suggestion". */
   text: string;
+  /**
+   * Outcome of the request, for benchmarking/diagnostics. Production consumers
+   * only read `text`; these are optional metrics the test harness relies on to
+   * tell a legitimate "no suggestion" apart from an error or a timeout.
+   * - "ok": a non-empty completion was produced.
+   * - "empty": the model intentionally returned nothing (NO_COMPLETION / blank).
+   * - "error": the provider failed (e.g. auth, subprocess crash).
+   * - "aborted": the request was cancelled or timed out.
+   */
+  status?: "ok" | "empty" | "error" | "aborted";
+  /** Wall-clock latency of the provider call, in milliseconds. */
+  latencyMs?: number;
+  /** Token usage reported by the model, when available. */
+  usage?: { inputTokens?: number; outputTokens?: number };
+  /** Cost of the request in USD, as reported by the SDK. */
+  costUsd?: number;
 }
 
 export interface CompletionProvider {

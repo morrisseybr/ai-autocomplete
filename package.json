@@ -103,7 +103,9 @@
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc --noEmit",
-    "smoke": "node --import tsx scripts/smoke.ts"
+    "test": "node --import tsx tests/run.ts",
+    "bench": "node --import tsx tests/bench.ts",
+    "smoke": "node --import tsx tests/run.ts --tag smoke"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.161"

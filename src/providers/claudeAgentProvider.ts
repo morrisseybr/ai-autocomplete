@@ -63,7 +63,7 @@ export class ClaudeAgentProvider implements CompletionProvider {
 
   async complete(req: CompletionRequest): Promise<CompletionResult> {
     if (req.signal.aborted) {
-      return { text: "" };
+      return { text: "", status: "aborted", latencyMs: 0 };
     }
 
     const userMessage = this.buildPrompt(req);
@@ -79,6 +79,8 @@ export class ClaudeAgentProvider implements CompletionProvider {
 
     const started = Date.now();
     let collected = "";
+    let usage: CompletionResult["usage"];
+    let costUsd: number | undefined;
 
     try {
       const query = await getQuery();
@@ -95,6 +97,13 @@ export class ClaudeAgentProvider implements CompletionProvider {
           ...(this.cfg.disableThinking
             ? { thinking: { type: "disabled" as const } }
             : {}),
+          // The SDK has no per-call max-output-tokens option, but the underlying
+          // CLI honours this env var. Bound the generation so a runaway response
+          // can't blow past what we'd ever insert as ghost text.
+          env: {
+            ...process.env,
+            CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(req.maxOutputTokens),
+          },
           // Use the user's installed claude binary (the package omits the SDK's).
           ...(this.cfg.executablePath
             ? { pathToClaudeCodeExecutable: this.cfg.executablePath }
@@ -113,6 +122,12 @@ export class ClaudeAgentProvider implements CompletionProvider {
             }
           }
         } else if (message.type === "result") {
+          // The result message carries the authoritative usage/cost figures.
+          usage = {
+            inputTokens: message.usage?.input_tokens,
+            outputTokens: message.usage?.output_tokens,
+          };
+          costUsd = message.total_cost_usd;
           if (message.subtype === "success" && typeof message.result === "string") {
             // The result string is the authoritative final text.
             collected = message.result;
@@ -122,27 +137,32 @@ export class ClaudeAgentProvider implements CompletionProvider {
       }
     } catch (err) {
       if (controller.signal.aborted) {
-        return { text: "" };
+        return { text: "", status: "aborted", latencyMs: Date.now() - started };
       }
       this.cfg.onLog?.(
         `claude provider error: ${err instanceof Error ? err.message : String(err)}`
       );
-      return { text: "" };
+      return { text: "", status: "error", latencyMs: Date.now() - started };
     } finally {
       req.signal.removeEventListener("abort", onAbort);
+    }
+
+    const latencyMs = Date.now() - started;
+    if (controller.signal.aborted) {
+      return { text: "", status: "aborted", latencyMs, usage, costUsd };
     }
 
     // cleanCompletion strips fences and the sentinel; an empty result means
     // there is nothing to suggest.
     const text = cleanCompletion(collected, req.prefix);
     if (!text) {
-      this.cfg.onLog?.(`claude: no completion (${Date.now() - started}ms)`);
-      return { text: "" };
+      this.cfg.onLog?.(`claude: no completion (${latencyMs}ms)`);
+      return { text: "", status: "empty", latencyMs, usage, costUsd };
     }
     this.cfg.onLog?.(
-      `claude completion in ${Date.now() - started}ms, ${text.length} chars`
+      `claude completion in ${latencyMs}ms, ${text.length} chars`
     );
-    return { text };
+    return { text, status: "ok", latencyMs, usage, costUsd };
   }
 
   private buildPrompt(req: CompletionRequest): string {
