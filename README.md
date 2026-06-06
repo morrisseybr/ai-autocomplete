@@ -34,11 +34,27 @@ completions — no custom keybindings required.
 ```bash
 npm install
 npm run build          # bundle to dist/extension.js
-npm run smoke          # headless test of the Claude provider (prints latency)
+npm run smoke          # quick headless sanity check (the `smoke`-tagged cases)
+npm test               # full regression catalog (pass/fail, headless)
+npm run bench          # benchmark a model × thinking × maxTokens matrix
 ```
 
 Press **F5** in VS Code to launch an Extension Development Host, open a code
 file, type, and pause to see suggestions.
+
+### Headless tests & benchmark
+
+The `tests/` harness drives the Claude provider directly (no VS Code) and judges
+completions deterministically (regex/predicate matchers + a universal "clean
+output" check). See [tests/README.md](tests/README.md) for case categories,
+matchers, and benchmark flags. Quick examples:
+
+```bash
+npm test -- --category simple        # one category
+npm test -- --tag smoke              # the migrated smoke subset
+AI_AC_MODEL=claude-sonnet-4-6 npm test
+npm run bench -- --models haiku --reps 1 --quick   # small, cheap matrix
+```
 
 ## Settings (`aiAutocomplete.*`)
 
