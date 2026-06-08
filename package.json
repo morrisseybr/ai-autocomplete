@@ -5,6 +5,14 @@
   "version": "0.1.0",
   "publisher": "caravela",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/morrisseybr/ai-autocomplete.git"
+  },
+  "homepage": "https://github.com/morrisseybr/ai-autocomplete#readme",
+  "bugs": {
+    "url": "https://github.com/morrisseybr/ai-autocomplete/issues"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
