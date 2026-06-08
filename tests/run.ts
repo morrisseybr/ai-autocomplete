@@ -33,7 +33,7 @@ async function main() {
 
   const config: ProviderRunConfig = {
     label: "run",
-    model: args.get("model") ?? process.env.AI_AC_MODEL ?? "claude-haiku-4-5-20251001",
+    model: args.get("model") ?? process.env.AI_AC_MODEL ?? "claude-sonnet-4-6",
     disableThinking:
       args.has("thinking") ? args.get("thinking") !== "on" : process.env.AI_AC_THINKING !== "on",
     maxOutputTokens: args.getNumber("max-tokens", Number(process.env.AI_AC_MAX_TOKENS) || 256),

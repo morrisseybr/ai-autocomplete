@@ -19,7 +19,7 @@ export function readConfig(): ExtensionConfig {
   return {
     enabled: c.get<boolean>("enabled", true),
     provider: c.get<string>("provider", "claude"),
-    claudeModel: c.get<string>("claude.model", "claude-haiku-4-5-20251001"),
+    claudeModel: c.get<string>("claude.model", "claude-sonnet-4-6"),
     claudeExecutablePath: c.get<string>("claude.executablePath", ""),
     claudeDisableThinking: c.get<boolean>("claude.disableThinking", true),
     debounceMs: c.get<number>("debounceMs", 600),

@@ -62,7 +62,7 @@ npm run bench -- --models haiku --reps 1 --quick   # small, cheap matrix
 | -------------------- | ------------------------------ | -------------------------------------------- |
 | `enabled`            | `true`                         | Enable/disable suggestions.                  |
 | `provider`           | `claude`                       | AI backend to use.                           |
-| `claude.model`       | `claude-haiku-4-5-20251001`    | Model (a fast one is recommended).           |
+| `claude.model`       | `claude-sonnet-4-6`    | Model (a fast one is recommended).           |
 | `claude.executablePath` | `""` (auto-detect)          | Path to the `claude` binary if not on PATH.  |
 | `claude.disableThinking` | `true`                     | Turn off extended thinking (~3x faster).     |
 | `debounceMs`         | `600`                          | Pause before requesting a suggestion.        |

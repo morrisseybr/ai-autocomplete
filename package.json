@@ -53,7 +53,7 @@
         },
         "aiAutocomplete.claude.model": {
           "type": "string",
-          "default": "claude-haiku-4-5-20251001",
+          "default": "claude-sonnet-4-6",
           "description": "Claude model alias or full name used for completions (a fast model is recommended)."
         },
         "aiAutocomplete.claude.executablePath": {
